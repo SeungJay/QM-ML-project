@@ -71,7 +71,8 @@ QM-ML-project/
 ├── pyproject.toml   README.md
 ```
 
-CP2K you install yourself.
+CP2K you install yourself — see [cp2k.org](https://www.cp2k.org/) (details in the
+next section).
 
 ## External programs (install separately)
 
@@ -85,6 +86,13 @@ bundled LAMMPS build (below) — no extra package.
   **CP2K 9.1**, but any version works as long as it supports the external
   potential (`&DFT/&EXTERNAL_POTENTIAL  READ_FROM_CUBE`). Give the binary via
   `cmd_cp2k="cp2k.psmp"` (on `PATH`) or a full path; no registration needed.
+  Get it from:
+  - Homepage & docs: <https://www.cp2k.org/>
+  - Downloads (source + binaries): <https://www.cp2k.org/download>
+  - Build from source: [`INSTALL.md`](https://github.com/cp2k/cp2k/blob/master/INSTALL.md)
+  - Quick install via conda: `conda install -c conda-forge cp2k`
+  - On an HPC cluster, check for a prebuilt module first
+    (e.g. `module avail cp2k` / `module load cp2k`).
 
 - **LAMMPS with n2p2 committee + external potential** — runs the MLFF MD in the
   constant-potential QM/ML loop (`qmml_run`). **Everything needed to install
