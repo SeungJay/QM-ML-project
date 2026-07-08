@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from .launcher import ProcessLauncher
+from .symfunc import make_symfunctions
 
 # Atomic numbers for the weights file names (weights.%03d.data, %03d = Z).
 _ATOMIC_NUMBER = {
@@ -46,11 +47,20 @@ _ATOMIC_NUMBER = {
 
 def _fill_template(template: str, *, elements: Sequence[str], seed: int,
                    n_epoch: int) -> str:
-    """Substitute the {n_elements}/{elements}/{seed}/{n_epoch} placeholders in an
-    n2p2 ``input.nn`` template (same placeholders the old AML templates used)."""
+    """Substitute the placeholders in an n2p2 ``input.nn`` template.
+
+    Fills ``{n_elements}`` / ``{elements}`` / ``{seed}`` / ``{n_epoch}`` (the AML
+    placeholders, format specs like ``{n_elements:d}`` / ``{elements:s}`` also
+    work) and the symmetry-function block ``{acsf}`` (AML's name; ``{symmetry_
+    functions}`` is accepted as an alias) — the full element-resolved ACSF set
+    generated for ``elements`` by :func:`dataprep.symfunc.make_symfunctions`. A
+    template that lists its symmetry functions explicitly is still supported
+    (unused keywords are ignored)."""
+    acsf = make_symfunctions(elements)
     return template.format(n_elements=len(elements),
                            elements=" ".join(elements),
-                           seed=seed, n_epoch=n_epoch)
+                           seed=seed, n_epoch=n_epoch,
+                           acsf=acsf, symmetry_functions=acsf)
 
 
 def select_best_epoch(learning_curve: str, metric: str = "force") -> int:
@@ -158,7 +168,11 @@ def train_committee(data_file: str, template_nn: str, out_dir: str = "committee"
 
     data_file   : training set, e.g. ``input-SR-QMML.data`` from stage 3.
     template_nn : an n2p2 ``input.nn`` with {n_elements}/{elements}/{seed}/
-                  {n_epoch} placeholders (member seed is ``seed0 + i``).
+                  {n_epoch} placeholders (member seed is ``seed0 + i``). A
+                  {symmetry_functions} placeholder, if present, is filled with the
+                  element-resolved ACSF block generated for ``elements`` (see
+                  :mod:`dataprep.symfunc`); a template listing symmetry functions
+                  explicitly also works.
     out_dir     : committee directory to create (``nnp-data-1 .. -N`` inside);
                   this is what stage 5's ``pair_style nnp dir "…"`` points at.
     elements    : element symbols in fixed order, e.g. ``('O','H','C','Na','Cl')``.

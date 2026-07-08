@@ -56,6 +56,7 @@ from .dftces import (
     run_coulomb, create_dftces_inputs, read_coulomb_result, DEFAULT_TYPE_MAP,
 )
 from .train import train_committee, train_member, select_best_epoch
+from .symfunc import make_symfunctions
 
 __all__ = [
     "Structure", "Structures", "Property",
@@ -70,4 +71,5 @@ __all__ = [
     "run_coulomb", "create_dftces_inputs", "read_coulomb_result",
     "DEFAULT_TYPE_MAP",
     "train_committee", "train_member", "select_best_epoch",
+    "make_symfunctions",
 ]
