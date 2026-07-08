@@ -26,10 +26,13 @@ from dataprep import train_committee, ProcessLauncher
 # Adds the recommended ARCHER2 srun flags via a callable launcher. Signature is
 # fixed by ProcessLauncher: (i_slot, n_core_task, size_node) -> prefix string.
 #
-# Cores are read from the SLURM allocation (SLURM_NTASKS = nodes x
-# tasks-per-node), so run.slurm is the single source of truth. The fallback is
-# only used when running outside SLURM.
-NCORES = int(os.environ.get("SLURM_NTASKS", 128))
+# Committee members train IN PARALLEL — one node each (like the old AML setup).
+# Allocate one node per member in run.slurm (nodes = N_MEMBERS). Each member's
+# srun then uses one node's worth of cores, and SLURM spreads the concurrent
+# steps across the nodes. Cores-per-member = total tasks / n_members.
+N_MEMBERS = 2                                             # committee size (example)
+TOTAL = int(os.environ.get("SLURM_NTASKS", N_MEMBERS * 128))
+CORES_PER_MEMBER = max(1, TOTAL // N_MEMBERS)             # ~one node per member
 
 
 def archer2_srun(i_slot, n_core_task, size_node):
@@ -40,16 +43,17 @@ train_committee(
     data_file="input-SR-QMML.data",   # decoupled training set from stage 3
     template_nn="input.nn",           # n2p2 template ({n_elements}/{elements}/
                                       #                 {seed}/{n_epoch})
-    out_dir="committee",              # committee dir (nnp-data-1..N inside)
+    out_dir="committee",              # committee dir (member 0 top level + nnp-data-1..)
     elements=("O", "H", "C", "Na", "Cl"),   # REPLACE for your system (fixed order)
-    n_members=8,                      # committee size
+    n_members=N_MEMBERS,              # committee size
+    n_parallel=N_MEMBERS,             # train all members at once (one node each)
     n_epoch=100,                      # training epochs per member
-    n_bins=500,                       # nnp-scaling histogram bins
+    n_bins=100,                       # nnp-scaling bins (AML hardcoded 100); optional
     seed0=1,                          # member i uses random_seed = seed0 + i
-    metric="force",                   # best-epoch by test RMSE: "force"|"energy"|"last"
+    metric="last",                    # AML used the final epoch; "force"/"energy" = best-RMSE
     cmd_scaling="nnp-scaling",        # bundled n2p2 tools (on PATH)
     cmd_train="nnp-train",
-    launcher=ProcessLauncher(mode=archer2_srun, n_core_task=NCORES),
+    launcher=ProcessLauncher(mode=archer2_srun, n_core_task=CORES_PER_MEMBER),
     skip_existing=True,               # resumable: skip members already trained
 )
 

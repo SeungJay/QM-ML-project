@@ -25,6 +25,7 @@ import glob
 import os
 import re
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -157,6 +158,7 @@ def train_member(data_file: str, template_nn: str, member_dir: str, *,
 
 def train_committee(data_file: str, template_nn: str, out_dir: str = "committee",
                     *, elements: Sequence[str], n_members: int = 8,
+                    n_parallel: int = 1,
                     n_epoch: int = 100, n_bins: int = 500, seed0: int = 1,
                     metric: str = "force",
                     cmd_scaling: str = "nnp-scaling",
@@ -193,22 +195,35 @@ def train_committee(data_file: str, template_nn: str, out_dir: str = "committee"
             nnp-data-<N-1>/ ...             committee member N-1
 
     This is *not* active learning: each member is trained for ``n_epoch`` epochs,
-    its best epoch is kept, and the committee is assembled — done. Members whose
-    target dir already holds weights are skipped when ``skip_existing``
-    (resumable). Returns ``out_dir``.
+    its best epoch is kept, and the committee is assembled — done.
+
+    ``n_parallel`` : how many members to train **at the same time**. With
+    ``n_parallel = n_members`` and a SLURM allocation of one node per member,
+    each member's ``srun`` step lands on its own node (SLURM spreads concurrent
+    steps across free nodes), so the whole committee trains in parallel — the way
+    the old AML committee did. Give the launcher ``n_core_task`` = cores per
+    member (one node's worth), not the whole allocation. ``n_parallel = 1`` (the
+    default) trains members one after another on the full allocation.
+
+    Members whose target dir already holds weights are skipped when
+    ``skip_existing`` (resumable). Returns ``out_dir``.
     """
     data_file = os.path.abspath(data_file)
     template_nn = os.path.abspath(template_nn)
     out_dir = os.path.abspath(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
+    # collect the members that still need training (committee member 0 lives at
+    # the top level; members 1..N-1 in nnp-data-c/)
+    todo = []
     for c in range(n_members):
-        # committee member 0 lives at the top level; members 1..N-1 in nnp-data-c/
         member_dir = out_dir if c == 0 else os.path.join(out_dir, f"nnp-data-{c}")
-        done = glob.glob(os.path.join(member_dir, "weights.*.data"))
-        if skip_existing and done:
+        if skip_existing and glob.glob(os.path.join(member_dir, "weights.*.data")):
             print(f"member {c + 1}/{n_members}: already trained, skipping")
             continue
+        todo.append((c, member_dir))
+
+    def _train_one(c, member_dir):
         print(f"member {c + 1}/{n_members}: training (seed={seed0 + c}) ...")
         train_member(data_file, template_nn, member_dir,
                      elements=elements, seed=seed0 + c, n_epoch=n_epoch,
@@ -216,11 +231,25 @@ def train_committee(data_file: str, template_nn: str, out_dir: str = "committee"
                      cmd_train=cmd_train, launcher=launcher,
                      keep_train_dir=keep_train_dir)
 
+    workers = max(1, min(int(n_parallel), len(todo)))
+    if workers > 1:
+        # Train members concurrently. Each train_member blocks on its own srun
+        # step; run in threads so the steps overlap and SLURM places them on
+        # separate nodes of the allocation.
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            futures = [ex.submit(_train_one, c, d) for c, d in todo]
+            for f in futures:
+                f.result()   # propagate the first exception, if any
+    else:
+        for c, d in todo:
+            _train_one(c, d)
+
     # top-level committee descriptor: member 0's input.nn + the prediction-only
     # committee keywords (written last so it is correct after a resumed run too).
     _write_committee_descriptor(out_dir, template_nn, elements=elements,
                                 seed=seed0, n_epoch=n_epoch, n_members=n_members)
-    print(f"committee ready: {out_dir}  ({n_members} members)")
+    print(f"committee ready: {out_dir}  ({n_members} members, "
+          f"{workers}-way parallel)")
     return out_dir
 
 

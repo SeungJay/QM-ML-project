@@ -3,10 +3,11 @@
 # SLURM template for UK ARCHER2 (HPE Cray EX). Trains the committee with the
 # bundled n2p2 tools (nnp-scaling, nnp-train). Resumable - members already
 # trained are skipped, so if the job hits the wall time just resubmit.
-# run_train.py reads the core count from SLURM_NTASKS (= nodes x tasks-per-node),
-# so just set the allocation here.
+# Members train IN PARALLEL, one node each: set --nodes = committee size
+# (N_MEMBERS in run_train.py). run_train.py derives cores-per-member from
+# SLURM_NTASKS / N_MEMBERS (= one node's cores).
 #SBATCH --job-name=nnp_committee
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --tasks-per-node=128
 #SBATCH --cpus-per-task=1
 #SBATCH --time=00:20:00
