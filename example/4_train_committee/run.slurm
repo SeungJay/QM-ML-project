@@ -30,8 +30,8 @@ module load eigen
 source /work/e05/e05/jay/anaconda3/bin/activate
 
 # n2p2 training binaries (nnp-scaling, nnp-train) on PATH - from the bundled
-# n2p2-v2.1.3-committee-nnp-extpot build. REPLACE with YOUR build path:
-export PATH="/work/e05/e05/<user>/.../QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/bin:${PATH}"
+# n2p2-v2.1.3-committee-nnp-extpot build:
+export PATH="/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/bin:${PATH}"
 # If you built against a custom GSL, add its lib too:
 # export LD_LIBRARY_PATH="/work/e05/e05/<user>/0.programs/gsl/lib:${LD_LIBRARY_PATH}"
 
