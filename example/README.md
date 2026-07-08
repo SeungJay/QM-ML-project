@@ -142,3 +142,26 @@ separate `NCORES` in sync. Several steps are resumable —
 `run_decouple.py` skips dirs with `summary.data`, and `run_train.py` skips
 committee members already trained — so you can just resubmit until everything
 finishes.
+
+## Reading the potential (stage 5)
+
+The QM/ML run logs its progress to `QMMLoutput.txt` (and stdout → `python.txt`).
+Once per cycle it writes a line like:
+
+```
+del_phi0: 1.00000 V, del_phi: 0.87421 V, deviates: -0.12579 V, will_apply: 0.34210 V
+```
+
+- **`del_phi0`** — the **target** potential you set (`del_phi_0` in `run_qmml.py`);
+  constant.
+- **`del_phi`** — the **current** electrode potential difference measured this
+  cycle. **This is the value to read** to see the actual potential.
+- `deviates` — `del_phi − del_phi0`, how far the current potential is from target.
+- `will_apply` — the accumulated correction the potentiostat applies next cycle.
+
+So to track the electrode potential over the run, pull the `del_phi` field from
+`QMMLoutput.txt` each cycle, e.g.:
+
+```bash
+grep -o 'del_phi: *[-0-9.]* V' QMMLoutput.txt
+```
