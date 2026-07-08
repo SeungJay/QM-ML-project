@@ -96,7 +96,7 @@
     &CELL
       A 12.35000018552732 0.0 0.0
       B 0.0 12.833998891836368 0.0
-      C 0.0 0.0 21.7000000410457
+      C 0.0 0.0 31.7499986937
       PERIODIC XYZ
     &END CELL
     &TOPOLOGY                    ! Section used to center the atomic coordinates in the given box. Useful for big molecules
