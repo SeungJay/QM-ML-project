@@ -7,6 +7,8 @@
 # (N_MEMBERS in run_train.py). run_train.py derives cores-per-member from
 # SLURM_NTASKS / N_MEMBERS (= one node's cores).
 #SBATCH --job-name=nnp_committee
+# --nodes MUST equal the committee size (N_MEMBERS in run_train.py): members
+# train in parallel, one node each.
 #SBATCH --nodes=2
 #SBATCH --tasks-per-node=128
 #SBATCH --cpus-per-task=1
