@@ -24,7 +24,7 @@ select_frames(
     traj_xyz="trajectory-output.xyz",   # AIMD trajectory (multi-frame XYZ)
     outdir="trajectory_inputs",
     mode="every",        # "every" (evenly spaced) or "random"
-    every=20,            # mode="every": take one frame every N steps
+    every=1,             # mode="every": take one frame every N steps
     n_random=140,        # mode="random": number of frames
     seed=77,             # mode="random": RNG seed
     skip_equil=0,        # drop this many leading equilibration frames
