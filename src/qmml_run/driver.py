@@ -307,7 +307,8 @@ def run(cfg: Config):
             else:
                 cube.cube_avg(cfg.cp2k_V_file, 3)
 
-                del_phi = -1.0 * read_pot_diff('cube.z.avg', cfg.anode_grid, cfg.cathode_grid)  # inverse convention
+                dp = read_pot_diff('cube.z.avg', cfg.anode_grid, cfg.cathode_grid)
+                del_phi = -1.0 * dp if dp is not None else None  # inverse convention
 
             if del_phi is not None:
                 net_phi = (del_phi - cfg.del_phi_0 / Ha2eV)  # in Ha units
@@ -315,7 +316,11 @@ def run(cfg: Config):
                 with open('QMMLoutput.txt', 'a') as f:
                     f.write(message)
             else:
-                message = "Potential values not found.\n"
+                message = ("Potential values not found: no flat point within the "
+                           f"anode_grid={cfg.anode_grid} / cathode_grid={cfg.cathode_grid} "
+                           "search ranges of cube.z.avg. Set these to flat, "
+                           "non-electrode grid indices for your system (both must be "
+                           "< the number of lines in cube.z.avg).\n")
                 with open('QMMLoutput.txt', 'a') as f:
                     f.write(message)
                 sys.exit()
