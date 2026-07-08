@@ -37,6 +37,26 @@ forward exactly — **① carried in** (from the previous folder), **② you add
 | 4 train committee | `input-SR-QMML.data` | `input.nn` (n2p2 template) | `committee/nnp-data-1..N/` |
 | 5 QM/ML run | `committee/` (path in `base.in.lammps`) | `base.cp2k.in`, `base.in.lammps`, `data.cp2k`, `data.lammps` | the QM/ML run |
 
+If you keep each stage in its own folder, copy the **① carried in** item from the
+previous stage before submitting (run from the `example/` directory):
+
+```bash
+# 1 -> 2 : the selected frames
+cp -r 1_aimd_and_frames/trajectory_inputs  2_dft_and_extract/
+
+# 2 -> 3 : the short-range DFT dataset
+cp 2_dft_and_extract/input-SR.data  3_charge_decouple/
+
+# 3 -> 4 : the charge-decoupled (non-ES) training set
+cp 3_charge_decouple/input-SR-QMML.data  4_train_committee/
+
+# 4 -> 5 : the trained committee (or just point base.in.lammps at its path)
+cp -r 4_train_committee/committee  5_qmml_run/
+```
+
+Running all stages in **one working directory** avoids these copies entirely —
+the outputs simply accumulate in place.
+
 Notes:
 - **CP2K data files** (`GTH_BASIS_SETS`, `BASIS_MOLOPT`, `POTENTIAL`, `dftd3.dat`)
   must be visible to every CP2K run — put them in the run dir or set
