@@ -105,13 +105,16 @@ def create_dftces_inputs(job_dir: str, step_inp: str = "step-0.inp",
         f.writelines(modified)
 
     # cp2k_initial.inp — external potential block removed, project 'initial'
+    # Match only real directive lines (stripped of leading '#'/spaces, *starts
+    # with* the keyword) so prose comments mentioning "&EXTERNAL_POTENTIAL" don't
+    # trip the skip and wipe the top of the file.
     initial, skip = [], False
     for line in modified:
-        up = line.upper()
-        if "&EXTERNAL_POTENTIAL" in up:
+        bare = line.lstrip("#").strip().upper()
+        if bare.startswith("&EXTERNAL_POTENTIAL"):
             skip = True
             continue
-        if "&END EXTERNAL_POTENTIAL" in up:
+        if bare.startswith("&END EXTERNAL_POTENTIAL"):
             skip = False
             continue
         if skip:
