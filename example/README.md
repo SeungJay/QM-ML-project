@@ -70,6 +70,17 @@ Notes:
   only `input-SR.data`.
 - `frame_index_map.txt` (in `trajectory_inputs/`) records which original AIMD
   frame each `NNN` came from.
+- **Stage 4 symmetry functions (ACSFs).** The `{acsf}` block of `input.nn` is
+  generated for your `elements` by `dataprep.symfunc.make_symfunctions` (a port
+  of the AML default: 10 shifted radial + 4 centred angular per element pair /
+  triple, r_c = 12 Bohr). This has so far only been exercised for the
+  **C, O, H, Na, Cl** example system. If you use a different element set,
+  **verify the generated symmetry functions rigorously** before trusting a
+  trained model — e.g. dump the filled `input.nn` (`from dataprep import
+  make_symfunctions; print(make_symfunctions(your_elements))`), check every
+  element pair/triple is present with sensible `eta`/`rshift`/`lambda`/`zeta`,
+  confirm `nnp-scaling` accepts them, and inspect the symmetry-function
+  distributions. Adjust the scheme in `dataprep/symfunc.py` if needed.
 - **Stage 5 initial structure** (`data.cp2k` = electrode, `data.lammps` = full
   electrode + electrolyte cell) is the configuration the production QM/ML run
   starts from. It is **taken from the training system** — e.g. an equilibrated
