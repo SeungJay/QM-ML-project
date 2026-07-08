@@ -74,17 +74,42 @@ Notes:
 
 ## Choosing the MPI launcher
 
-Scripts that run CP2K/LAMMPS/n2p2 expose a toggle at the top:
+`ProcessLauncher(mode=...)` builds the MPI-launch prefix. `mode` is either a
+built-in name — `"srun"` → `srun -n NCORES`, `"mpirun"` → `mpirun -np NCORES`,
+`"plain"` → no prefix — or a **callable** `(i_slot, n_core_task, size_node) ->
+prefix string` for full control.
+
+**These templates are configured for UK ARCHER2** (see below), so the scripts use
+a callable that adds the recommended ARCHER2 srun flags (the built-in `"srun"`
+preset does not):
 
 ```python
-LAUNCHER = "srun"    # "srun" | "mpirun" | "plain"
-NCORES   = 64        # must match the SLURM tasks
+import os
+
+# core count comes from the SLURM allocation (nodes x tasks-per-node), so
+# run.slurm is the single source of truth; the fallback is only for manual runs
+NCORES = int(os.environ.get("SLURM_NTASKS", 128))
+
+def archer2_srun(i_slot, n_core_task, size_node):
+    return (f"srun --hint=nomultithread --distribution=block:block "
+            f"-n {n_core_task} ")
+
+launcher = ProcessLauncher(mode=archer2_srun, n_core_task=NCORES)
 ```
 
-`"srun"` → `srun -n NCORES`, `"mpirun"` → `mpirun -np NCORES`, `"plain"` → no
-prefix.
+On another cluster, drop the callable and use `mode="srun"` / `"mpirun"` / a
+callable with your own flags.
 
 ## Submitting to SLURM
+
+> **These `run.slurm` templates are written for UK ARCHER2** (HPE Cray EX):
+> `--account=e05-react-wal`, `--partition=standard --qos=standard`, the ARCHER2
+> `module load` lines (`cp2k/cp2k-9.1.0` for CP2K stages; `cpe/22.12` + `gsl` +
+> `eigen` for the LAMMPS/n2p2 stages), and the central CP2K binary
+> `/work/y07/shared/apps/core/cp2k/cp2k-9.1.0/exe/ARCHER2/cp2k.popt`. On another
+> cluster, edit the `#SBATCH` header, the `module load` lines, and the executable
+> paths. Placeholders marked `<user>` / `REPLACE` (venv path, your n2p2 build
+> location) must be filled in before submitting.
 
 The heavy steps must run inside a SLURM allocation, so **each stage ships its own
 `run.slurm`** — one submission runs the whole stage:
@@ -104,8 +129,10 @@ step by hand, delete/comment its line and just `python run_select_frames.py` /
 `python run_extract.py` on a login node afterwards.
 
 Each `run.slurm` is a template: edit the `#SBATCH` header, the `module load`
-lines, and the `PATH` to your CP2K / LAMMPS / n2p2 binaries. **`--ntasks` must
-match `NCORES`** in the corresponding `.py`. Several steps are resumable —
+lines, and the `PATH` to your CP2K / LAMMPS / n2p2 binaries. The `.py` scripts
+read the core count from `SLURM_NTASKS` (= `nodes` × `tasks-per-node`), so the
+allocation in `run.slurm` is the single source of truth — no need to keep a
+separate `NCORES` in sync. Several steps are resumable —
 `run_singlepoints.py` skips `calculator-NNN/` dirs with `forces-output.xyz`,
 `run_decouple.py` skips dirs with `summary.data`, and `run_train.py` skips
 committee members already trained — so you can just resubmit until everything

@@ -1,28 +1,41 @@
 #!/bin/bash
-# Stage 1 — CP2K AIMD + frame selection.  Submit with:  sbatch run.slurm
-# Runs the whole stage in one job: the AIMD (heavy), then the frame selection
-# (cheap, serial). --ntasks MUST match NCORES in run_aimd.py.
+# Stage 1 - CP2K AIMD + frame selection.  Submit with:  sbatch run.slurm
+# SLURM template for UK ARCHER2 (HPE Cray EX). Runs the whole stage in one job:
+# the AIMD (heavy), then the frame selection (cheap, serial).
+# run_aimd.py reads the core count from SLURM_NTASKS (= nodes x tasks-per-node),
+# so just set the allocation here.
 #SBATCH --job-name=aimd
-#SBATCH --nodes=1
-#SBATCH --ntasks=64
+#SBATCH --nodes=4
+#SBATCH --tasks-per-node=128
 #SBATCH --cpus-per-task=1
-#SBATCH --time=48:00:00
+#SBATCH --time=24:00:00
+#SBATCH --account=e05-react-wal
+#SBATCH --partition=standard
+#SBATCH --qos=standard
 #SBATCH --error=stderr_%j.txt
 #SBATCH --output=stdout_%j.txt
 #SBATCH --export=none
 
-# ---- environment (edit modules / paths for your cluster) --------------------
-# module load cp2k/cp2k-9.1.0    # or whatever provides your cp2k binary
-# source /path/to/conda/bin/activate    # a Python env with QMML installed
+# ---- environment (ARCHER2) --------------------------------------------------
+module load cp2k/cp2k-9.1.0
 
-export OMP_NUM_THREADS=1
+# QMML lives in this Anaconda (base) env - activate it so dataprep imports. The
+# job runs with --export=none, so activate inside the job (the login shell's
+# PATH is not inherited). Anaconda provides python, so no cray-python needed.
+source /work/e05/e05/jay/anaconda3/bin/activate
+
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export OMP_PLACES=cores
+export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+
 cd "${SLURM_SUBMIT_DIR}"
 
-# CP2K binary on PATH (or give a full path via cmd_cp2k in run_aimd.py):
-# export PATH="/path/to/cp2k/bin:${PATH}"
+# CP2K basis/potential data (GTH_BASIS_SETS, BASIS_MOLOPT, POTENTIAL, dftd3.dat)
+# must be visible from the run dir; export CP2K_DATA_DIR if aimd.inp needs it:
+# export CP2K_DATA_DIR=/work/y07/shared/apps/core/cp2k/cp2k-9.1.0/data
 
-# 1) AIMD (heavy — launches srun cp2k internally)
+# 1) AIMD (heavy - run_aimd.py launches srun cp2k internally)
 python run_aimd.py
 
-# 2) frame selection (cheap, serial — pure Python, no MPI)
+# 2) frame selection (cheap, serial - pure Python, no MPI)
 python run_select_frames.py

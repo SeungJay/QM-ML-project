@@ -1,24 +1,43 @@
 #!/bin/bash
-# Stage 4 — n2p2 committee training.  Submit with:  sbatch run.slurm
-# NCORES in run_train.py must match the task count here.
+# Stage 4 - n2p2 committee training.  Submit with:  sbatch run.slurm
+# SLURM template for UK ARCHER2 (HPE Cray EX). Trains the committee with the
+# bundled n2p2 tools (nnp-scaling, nnp-train). Resumable - members already
+# trained are skipped, so if the job hits the wall time just resubmit.
+# run_train.py reads the core count from SLURM_NTASKS (= nodes x tasks-per-node),
+# so just set the allocation here.
 #SBATCH --job-name=nnp_committee
-#SBATCH --time=96:00:00
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=128
 #SBATCH --cpus-per-task=1
+#SBATCH --time=24:00:00
+#SBATCH --account=e05-react-wal
+#SBATCH --partition=standard
+#SBATCH --qos=standard
 #SBATCH --error=stderr_%j.txt
 #SBATCH --output=stdout_%j.txt
 #SBATCH --export=none
 
-# ---- environment (edit modules / paths for your cluster) --------------------
-# module load ...            # the compiler + MKL/GSL/Eigen n2p2 was built with
-# source /path/to/conda/bin/activate    # a Python env with QMML installed
+# ---- environment (ARCHER2) --------------------------------------------------
+# Same toolchain the n2p2 tools were built with.
+module load cpe/22.12
+module load gsl
+module load eigen
 
-export OMP_NUM_THREADS=1
+# QMML lives in this Anaconda (base) env - activate it so dataprep imports. The
+# job runs with --export=none, so activate inside the job (the login shell's
+# PATH is not inherited). Anaconda provides python, so no cray-python needed.
+source /work/e05/e05/jay/anaconda3/bin/activate
+
+# n2p2 training binaries (nnp-scaling, nnp-train) on PATH - from the bundled
+# n2p2-v2.1.3-committee-nnp-extpot build. REPLACE with YOUR build path:
+export PATH="/work/e05/e05/<user>/.../QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/bin:${PATH}"
+# If you built against a custom GSL, add its lib too:
+# export LD_LIBRARY_PATH="/work/e05/e05/<user>/0.programs/gsl/lib:${LD_LIBRARY_PATH}"
+
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export OMP_PLACES=cores
+export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+
 cd "${SLURM_SUBMIT_DIR}"
-
-# n2p2 training binaries (nnp-scaling, nnp-train) on PATH — from the bundled
-# n2p2-v2.1.3-committee-nnp-extpot build:
-export PATH="/path/to/n2p2-v2.1.3-committee-nnp-extpot/bin:${PATH}"
 
 python run_train.py

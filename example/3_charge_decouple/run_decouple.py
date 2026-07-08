@@ -11,15 +11,34 @@ environments, point `cmd_cp2k` / `cmd_lammps` at wrapper scripts that set up
 their own environment. Launch inside a SLURM allocation.
 """
 
+import os
+
 from dataprep import (prepare_jobs_from_data, run_coulomb, decouple_files,
                       ProcessLauncher)
 
-LAUNCHER = "mpirun"     # "srun" | "mpirun" | "plain"
-NCORES = 64             # must match SBATCH -n
-CP2K = "cp2k.psmp"
-LMP = "../n2p2-v2.1.3-committee-nnp-extpot/bin/lmp_mpi"   # built LAMMPS (DFT-CES)
+# ---- ARCHER2 launcher ------------------------------------------------------
+# The same launcher prefix is applied to both CP2K and LAMMPS. On ARCHER2 the
+# recommended srun flags are added via this callable. Signature is fixed by
+# ProcessLauncher: (i_slot, n_core_task, size_node) -> prefix string.
+#
+# Cores are read from the SLURM allocation (SLURM_NTASKS = nodes x
+# tasks-per-node), so run.slurm is the single source of truth. The fallback is
+# only used when running outside SLURM.
+NCORES = int(os.environ.get("SLURM_NTASKS", 128))
 
-launcher = ProcessLauncher(mode=LAUNCHER, n_slots=1, n_core_task=NCORES)
+
+def archer2_srun(i_slot, n_core_task, size_node):
+    return (f"srun --hint=nomultithread --distribution=block:block "
+            f"-n {n_core_task} ")
+
+
+# CP2K on ARCHER2 is a central install (MPI-only cp2k.popt):
+CP2K = "/work/y07/shared/apps/core/cp2k/cp2k-9.1.0/exe/ARCHER2/cp2k.popt"
+# Bundled DFT-CES LAMMPS - use an ABSOLUTE path (run_coulomb executes it from
+# inside each calculator-NNN/ dir, so a relative path would not resolve). REPLACE:
+LMP = "/work/e05/e05/<user>/.../QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/bin/lmp_mpi"
+
+launcher = ProcessLauncher(mode=archer2_srun, n_slots=1, n_core_task=NCORES)
 
 # 1. build the coulomb job dirs straight from input-SR.data (geometry + cell come
 #    from the dataset), using the coulomb CP2K template (external-potential block

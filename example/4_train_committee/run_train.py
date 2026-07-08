@@ -18,11 +18,23 @@ Only the bundled n2p2 binaries are used (no external Python package). Launch
 inside a SLURM allocation — see run.slurm.
 """
 
+import os
+
 from dataprep import train_committee, ProcessLauncher
 
-# ---- pick your MPI launcher: "srun" | "mpirun" | "plain" ----
-LAUNCHER = "srun"
-NCORES = 128                      # must match SBATCH tasks
+# ---- ARCHER2 launcher ------------------------------------------------------
+# Adds the recommended ARCHER2 srun flags via a callable launcher. Signature is
+# fixed by ProcessLauncher: (i_slot, n_core_task, size_node) -> prefix string.
+#
+# Cores are read from the SLURM allocation (SLURM_NTASKS = nodes x
+# tasks-per-node), so run.slurm is the single source of truth. The fallback is
+# only used when running outside SLURM.
+NCORES = int(os.environ.get("SLURM_NTASKS", 128))
+
+
+def archer2_srun(i_slot, n_core_task, size_node):
+    return (f"srun --hint=nomultithread --distribution=block:block "
+            f"-n {n_core_task} ")
 
 train_committee(
     data_file="input-SR-QMML.data",   # decoupled training set from stage 3
@@ -37,7 +49,7 @@ train_committee(
     metric="force",                   # best-epoch by test RMSE: "force"|"energy"|"last"
     cmd_scaling="nnp-scaling",        # bundled n2p2 tools (on PATH)
     cmd_train="nnp-train",
-    launcher=ProcessLauncher(mode=LAUNCHER, n_core_task=NCORES),
+    launcher=ProcessLauncher(mode=archer2_srun, n_core_task=NCORES),
     skip_existing=True,               # resumable: skip members already trained
 )
 
