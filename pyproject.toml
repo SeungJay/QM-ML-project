@@ -10,13 +10,29 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Jay" }]
+keywords = [
+    "molecular-dynamics", "machine-learning-potential", "neural-network-potential",
+    "n2p2", "cp2k", "lammps", "electrochemistry", "dft", "constant-potential",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dependencies = [
     "numpy>=1.20",
     "scipy>=1.6",
 ]
 
 [project.urls]
+Homepage = "https://github.com/SeungJay/QM-ML-project"
 Repository = "https://github.com/SeungJay/QM-ML-project"
+Issues = "https://github.com/SeungJay/QM-ML-project/issues"
 
 [project.scripts]
 chg2pot = "poisson.cli:chg2pot_main"
