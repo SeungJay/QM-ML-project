@@ -151,7 +151,15 @@ def train_member(data_file: str, template_nn: str, member_dir: str, *,
                 f"`write_weights_epoch 1` is set in input.nn")
         shutil.copyfile(src, os.path.join(member_dir, f"weights.{z:03d}.data"))
 
+    # always keep the learning curve (per-epoch RMSE) — small and useful even
+    # when the scratch dir is cleaned up below.
+    lc = os.path.join(train_dir, "learning-curve.out")
+    if os.path.exists(lc):
+        shutil.copyfile(lc, os.path.join(member_dir, "learning-curve.out"))
+
     if not keep_train_dir:
+        # remove the scratch dir (per-epoch weights, input.data copy, etc.).
+        # Set keep_train_dir=True to keep it for inspection.
         shutil.rmtree(train_dir, ignore_errors=True)
     return member_dir
 

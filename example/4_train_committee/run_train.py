@@ -55,6 +55,9 @@ train_committee(
     cmd_train="nnp-train",
     launcher=ProcessLauncher(mode=archer2_srun, n_core_task=CORES_PER_MEMBER),
     skip_existing=True,               # resumable: skip members already trained
+    keep_train_dir=False,             # True keeps each member's <dir>.train scratch
+                                      # (per-epoch weights, nnp logs). learning-curve.out
+                                      # is kept in the member dir either way.
 )
 
 # Output: committee/ — member 0 at the top level (input.nn with committee_mode /
