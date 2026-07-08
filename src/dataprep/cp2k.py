@@ -24,6 +24,7 @@ import os
 import re
 import shlex
 import shutil
+import subprocess
 
 import numpy as np
 
@@ -105,16 +106,17 @@ def inject_cell_and_topology(template: str, cell_ang, coord_file: str = "coord.x
 def run_aimd(input_file: str = "aimd.inp", cmd_cp2k: str = "cp2k.psmp",
              output: str = "aimd.log", directory: str = ".",
              launcher: Optional[ProcessLauncher] = None) -> str:
-    """Run one CP2K job (e.g. an AIMD) in ``directory``, writing CP2K's stdout to
-    ``output``. Intended to be launched *inside* a SLURM allocation via a
-    ``ProcessLauncher`` whose ``mode`` emits an ``srun -n N`` / ``mpirun -np N``
-    prefix. Returns the log path."""
+    """Run one CP2K job (e.g. an AIMD) in ``directory``, streaming CP2K's stdout
+    live to ``output`` so the log grows during the run and survives a job kill
+    (e.g. hitting the wall time). Intended to be launched *inside* a SLURM
+    allocation via a ``ProcessLauncher`` whose ``mode`` emits an ``srun -n N`` /
+    ``mpirun -np N`` prefix. Returns the log path."""
     launcher = launcher or ProcessLauncher()
-    cmd = shlex.split(cmd_cp2k) + ["-i", input_file]
-    r = launcher.run([cmd], directory, check=False)[0]
+    cmd = shlex.split(launcher.prefix()) + shlex.split(cmd_cp2k) + ["-i", input_file]
     log = os.path.join(directory, output)
     with open(log, "w") as f:
-        f.write(r.stdout)
+        r = subprocess.run(cmd, cwd=str(directory), stdout=f,
+                           stderr=subprocess.PIPE, text=True)
     if r.returncode != 0:
         print(f"warning: CP2K exited {r.returncode} in {directory} "
               f"(see {output})\n  stderr: {r.stderr[-1000:]}")
@@ -145,10 +147,10 @@ def run_singlepoints(job_dirs="calculator-*", input_file: str = "step-0.inp",
         if skip_existing and os.path.isfile(os.path.join(d, forces_name)):
             print(f"skip {d} (has {forces_name})")
             continue
-        cmd = shlex.split(cmd_cp2k) + ["-i", input_file]
-        r = launcher.run([cmd], d, check=False)[0]
+        cmd = shlex.split(launcher.prefix()) + shlex.split(cmd_cp2k) + ["-i", input_file]
         with open(os.path.join(d, output), "w") as f:
-            f.write(r.stdout)
+            r = subprocess.run(cmd, cwd=str(d), stdout=f,
+                               stderr=subprocess.PIPE, text=True)
         if r.returncode != 0:
             print(f"warning: CP2K exited {r.returncode} in {d} (see {output})")
         done.append(d)
