@@ -9,10 +9,10 @@
 #SBATCH --nodes=4
 #SBATCH --tasks-per-node=128
 #SBATCH --cpus-per-task=1
-#SBATCH --time=24:00:00
+#SBATCH --time=00:20:00
 #SBATCH --account=e05-react-wal
 #SBATCH --partition=standard
-#SBATCH --qos=standard
+#SBATCH --qos=short
 #SBATCH --error=stderr_%j.txt
 #SBATCH --output=stdout_%j.txt
 #SBATCH --export=none

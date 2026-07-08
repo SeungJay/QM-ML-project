@@ -140,7 +140,7 @@
    &END PRINT
    &MD
       ENSEMBLE NVT
-      STEPS 10000
+      STEPS 10
       TIMESTEP 0.5
       TEMPERATURE 300.0
       &THERMOSTAT
