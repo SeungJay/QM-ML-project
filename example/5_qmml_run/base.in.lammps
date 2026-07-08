@@ -11,7 +11,7 @@ kspace_modify slab 3.0
 # data file written from end of classical force field simulation
 read_data    data.lammps
 
-pair_style hybrid/overlay nnp dir "/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project/example/4_train_committee/pretrained_model/final_model/" showew no showewsum 10000 maxew 10000 resetew yes calcd 1 wricde 0.0 maxcde 10000000.0 wricdf 10000000 maxcdf 10000000 cflength 1.8897261328  cfenergy 0.0015936010974213599 emap "1:C,2:O,3:H,4:Na,5:Cl" coul/long 10.0
+pair_style hybrid/overlay nnp dir "/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project/example/4_train_committee/committee/" showew no showewsum 10000 maxew 10000 resetew yes calcd 1 wricde 0.0 maxcde 10000000.0 wricdf 10000000 maxcdf 10000000 cflength 1.8897261328  cfenergy 0.0015936010974213599 emap "1:C,2:O,3:H,4:Na,5:Cl" coul/long 10.0
 pair_coeff * * nnp 6.35013
 pair_coeff * * coul/long
 

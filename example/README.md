@@ -50,8 +50,11 @@ cp 2_dft_and_extract/input-SR.data  3_charge_decouple/
 # 3 -> 4 : the charge-decoupled (non-ES) training set
 cp 3_charge_decouple/input-SR-QMML.data  4_train_committee/
 
-# 4 -> 5 : the trained committee (or just point base.in.lammps at its path)
-cp -r 4_train_committee/committee  5_qmml_run/
+# 4 -> 5 : the trained committee. base.in.lammps already points its
+#          `pair_style nnp dir` at 4_train_committee/committee/ (absolute path),
+#          so no copy is needed — just finish stage 4 first. (To use the shipped
+#          pretrained model instead, point that dir at
+#          4_train_committee/pretrained_model/final_model/.)
 ```
 
 Running all stages in **one working directory** avoids these copies entirely —
