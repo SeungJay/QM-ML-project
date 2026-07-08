@@ -16,8 +16,8 @@ cfg = Config(
     # Executables / MPI launcher   (edit the paths for your cluster)
     # ---------------------------------------------------------------- #
     mpirun="srun",                                  # MPI launcher (srun / mpirun)
-    lmp_executable="…/n2p2-v2.1.3-committee-nnp-extpot/bin/lmp_mpi",  # built LAMMPS
-    cp2k_executable="cp2k.popt",                    # CP2K binary
+    lmp_executable="/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/bin/lmp_mpi",  # built LAMMPS
+    cp2k_executable="/work/y07/shared/apps/core/cp2k/cp2k-9.1.0/exe/ARCHER2/cp2k.popt",  # CP2K binary
 
     # ---------------------------------------------------------------- #
     # Input templates / CP2K output cube names
@@ -44,15 +44,25 @@ cfg = Config(
     # ---------------------------------------------------------------- #
     potentiostat=True,                              # apply sigmoidal potential correction
     steepness=0.4,                                  # sigmoid steepness (0.4 recommended)
-    anode_z_pos=14.78,                              # anode electrode plane z (bohr)
-    cathod_z_pos=27.42,                             # cathode electrode plane z (bohr)
+    # z of the anode/cathode planes where the sigmoid potential ramps. These are
+    # SYSTEM-SPECIFIC (values here are from the 4-layer production run). Choose
+    # them so the sigmoid's sloped (transition) region does NOT overlap the
+    # electrode charge density — the ramp must sit where there is no electrode
+    # electron density, otherwise the applied potential distorts the electrode.
+    anode_z_pos=14.18,                              # anode plane z (bohr)
+    cathod_z_pos=45.825855,                         # cathode plane z (bohr)
     prefactor=1.0,                                  # scales the sigmoidal function
 
     # ---------------------------------------------------------------- #
     # Potential-difference reading (planar-averaged profile grid indices)
     # ---------------------------------------------------------------- #
-    anode_grid=165,                                 # vacuum grid index near anode
-    cathode_grid=314,                               # vacuum grid index near cathode
+    # Grid indices on the z-averaged profile where the converged potential is
+    # read to get del_phi. SYSTEM-SPECIFIC. Pick indices that (a) do NOT overlap
+    # either electrode's charge and (b) sit where the potential is FLAT (a
+    # plateau) — check the z-averaged profile and confirm both before trusting
+    # the potential difference.
+    anode_grid=150,                                 # flat-region grid index near anode
+    cathode_grid=530,                               # flat-region grid index near cathode
 
     # ---------------------------------------------------------------- #
     # Running parameters
@@ -62,7 +72,7 @@ cfg = Config(
     savecube=1000,                                  # keep QM grid every N cycles (else deleted)
     saverestart=100,                                # save a restart every N cycles
     max_cycles=10000,                               # total number of QM/ML cycles
-    del_phi_0=0.0,                                  # REPLACE: target potential (V)
+    del_phi_0=1.0,                                  # target potential (V)
 
     # ---------------------------------------------------------------- #
     # Continuation run
