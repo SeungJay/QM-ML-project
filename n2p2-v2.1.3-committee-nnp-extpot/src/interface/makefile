@@ -48,7 +48,7 @@ clean: clean-lammps-nnp
 LAMMPS_DEBUG := $(filter-out -pedantic-errors,$(PROJECT_DEBUG))
 lammps-nnp:
 	# --- 1) Download pristine LAMMPS source from GitHub ------------------
-	if [ ! -e $(LAMMPS_VERSION).tar.gz ]; then \
+	if [ ! -e $(LAMMPS_VERSION).tar.gz ] && [ ! -d lammps-nnp ]; then \
 		command -v wget >/dev/null 2>&1 \
 		&& wget https://github.com/lammps/lammps/archive/$(LAMMPS_VERSION).tar.gz \
 		|| curl -L -o $(LAMMPS_VERSION).tar.gz https://github.com/lammps/lammps/archive/$(LAMMPS_VERSION).tar.gz; \
@@ -58,7 +58,7 @@ lammps-nnp:
 		tar -xzf $(LAMMPS_VERSION).tar.gz && mv lammps-$(LAMMPS_VERSION) lammps-nnp; \
 	fi
 	# --- 3) Download the DFT-CES patch ----------------------------------
-	if [ ! -e $(DFTCES_PATCH) ]; then \
+	if [ ! -e $(DFTCES_PATCH) ] && [ ! -e lammps-nnp/src/grid.cpp ]; then \
 		command -v wget >/dev/null 2>&1 \
 		&& wget -O $(DFTCES_PATCH) $(DFTCES_PATCH_URL) \
 		|| curl -L -o $(DFTCES_PATCH) $(DFTCES_PATCH_URL); \
@@ -82,10 +82,13 @@ lammps-nnp:
 		sed -i.bak "/^LINKFLAGS =/ s/$$/ $(LAMMPS_DEBUG) $(PROJECT_TEST)/" lammps-nnp/src/MAKE/Makefile.mpi; \
 	fi
 	@rm lammps-nnp/src/MAKE/Makefile.mpi.bak
-	# --- 7) Build LAMMPS (committee NNP + molecule + DFT-CES) -----------
-	cd lammps-nnp/src/ && $(MAKE) yes-user-nnp && $(MAKE) yes-molecule && $(MAKE) mpi
+	# --- 7) Build LAMMPS (committee NNP + molecule + kspace + DFT-CES) --
+	cd lammps-nnp/src/ && $(MAKE) yes-user-nnp && $(MAKE) yes-molecule && $(MAKE) yes-kspace && $(MAKE) mpi
 	cp lammps-nnp/src/lmp_mpi $(PROJECT_BIN)/
-	# --- 8) Report what was done ---------------------------------------
+	# --- 8) Clean up downloaded archive + patch ------------------------
+	$(RM) $(LAMMPS_VERSION).tar.gz
+	$(RM) $(DFTCES_PATCH)
+	# --- 9) Report what was done ---------------------------------------
 	@echo ""
 	@echo "==================================================================="
 	@echo " lammps-nnp is ready."
@@ -101,8 +104,10 @@ lammps-nnp:
 	@echo "  5. Linked n2p2 (lammps-nnp/lib/nnp) and installed the committee"
 	@echo "     NNP pair style (USER-NNP -> pair_nnp)"
 	@echo "  6. Set the MPI compiler to $(PROJECT_MPICC) in Makefile.mpi"
-	@echo "  7. Built with packages user-nnp + molecule -> lmp_mpi"
+	@echo "  7. Built with packages user-nnp + molecule + kspace -> lmp_mpi"
 	@echo "     Executable copied to $(PROJECT_BIN)/lmp_mpi"
+	@echo "  8. Removed the downloaded archive ($(LAMMPS_VERSION).tar.gz)"
+	@echo "     and patch ($(DFTCES_PATCH))"
 	@echo "==================================================================="
 	@echo ""
 

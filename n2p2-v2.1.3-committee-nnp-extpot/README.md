@@ -69,12 +69,16 @@ Running `make` here performs the whole setup automatically:
 5. links n2p2 (`lammps-nnp/lib/nnp`) and installs the committee NNP pair style
    (`USER-NNP` → `pair_nnp`)
 6. sets the MPI compiler in `MAKE/Makefile.mpi`
-7. builds with the `user-nnp` and `molecule` packages → `lmp_mpi`, copied to `bin/`
+7. builds with the `user-nnp`, `molecule` and `kspace` packages → `lmp_mpi`,
+   copied to `bin/`
+8. removes the downloaded archive (`stable_29Sep2021.tar.gz`) and patch
+   (`stable_29Sep2021.patch`)
 
 When it finishes it prints a summary of exactly these steps.
 
 The resulting `bin/lmp_mpi` supports `pair_style nnp` (with committee-disagreement
-keywords), the `grid` command, and `fix gridforce`.
+keywords), the `grid` command, `fix gridforce`, and `kspace_style pppm` /
+`pair_style coul/long` for long-range electrostatics.
 
 To rebuild from scratch:
 
