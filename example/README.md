@@ -22,30 +22,6 @@ the SLURM section below).
 The example inputs are for a NaCl-in-water / graphene-electrode system — edit the
 cell, atom types, point charges, basis/potentials, etc. for your own system.
 
-## Stage 4 — committee training (n2p2, no active learning)
-
-A committee is just `n_members` ordinary n2p2 NNPs trained on the same data set
-with different random seeds. `train_committee()` drives the **bundled** n2p2
-tools (`nnp-scaling` then `nnp-train`) once per member, picks each member's best
-epoch from its `learning-curve.out`, and assembles the directory LAMMPS wants:
-
-```
-committee/nnp-data-1/  input.nn  scaling.data  weights.<Z>.data ...
-committee/nnp-data-2/  ...
-```
-
-No external Python package is needed — only the n2p2 binaries from the bundled
-`n2p2-v2.1.3-committee-nnp-extpot` build must be on `PATH` (`run.slurm` sets it).
-`input.nn` is the n2p2 template (its `{n_elements}/{elements}/{seed}/{n_epoch}`
-are filled per member; keep `write_weights_epoch 1` so per-epoch weights exist to
-select from).
-
-**Before the QM/ML run (folder 5):** in `base.in.lammps`, point `pair_style nnp
-dir "…/committee/"` at the committee trained in stage 4, and check the point
-charges / `emap`. In `base.cp2k.in`, the `&GLOBAL PROJECT` + cube `FILENAME`s
-determine the cube names that `run_qmml.py`'s `cp2k_V_file` / `cp2k_e_file` must
-match. Submit with `run.slurm` (runs `python run_qmml.py`).
-
 ## Passing files between folders
 
 The stages share files, so the simplest setup is **one working directory** where
