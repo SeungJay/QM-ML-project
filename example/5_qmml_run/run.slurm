@@ -27,11 +27,10 @@ module load eigen
 # PATH is not inherited). Anaconda provides python, so no cray-python needed.
 source /work/e05/e05/jay/anaconda3/bin/activate
 
-# Shared libs for the DFT-CES LAMMPS build. REPLACE with YOUR n2p2 build path
-# (and custom GSL, if you built one):
-export LD_LIBRARY_PATH="/work/e05/e05/<user>/.../QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/src/interface/lammps-nnp/src:${LD_LIBRARY_PATH}"
+# Shared libs for the DFT-CES LAMMPS build (point at your n2p2 build):
+export LD_LIBRARY_PATH="/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/src/interface/lammps-nnp/src:${LD_LIBRARY_PATH}"
 export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}"
-# export LD_LIBRARY_PATH="/work/e05/e05/<user>/0.programs/gsl/lib:${LD_LIBRARY_PATH}"
+# export LD_LIBRARY_PATH="/work/e05/e05/jay/0.programs/gsl/lib:${LD_LIBRARY_PATH}"  # only if built against a custom GSL
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export OMP_PLACES=cores
