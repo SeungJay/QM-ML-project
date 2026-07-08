@@ -30,6 +30,12 @@ export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
 
 cd "${SLURM_SUBMIT_DIR}"
 
+# Make the QMML packages importable on compute nodes. A `pip install --user`
+# lands in ~/.local (=/home), which ARCHER2 compute nodes cannot see, so point
+# PYTHONPATH at the repo's src/ under /work. EDIT to your repo location.
+QMML_REPO=/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project
+export PYTHONPATH="${QMML_REPO}/src:${PYTHONPATH}"
+
 # CP2K basis/potential data (GTH_BASIS_SETS, BASIS_MOLOPT, POTENTIAL, dftd3.dat)
 # must be visible from the run dir; export CP2K_DATA_DIR if aimd.inp needs it:
 # export CP2K_DATA_DIR=/work/y07/shared/apps/core/cp2k/cp2k-9.1.0/data

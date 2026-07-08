@@ -40,4 +40,9 @@ export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
 
 cd "${SLURM_SUBMIT_DIR}"
 
+# Make the QMML packages importable on compute nodes (see stage 1 note).
+# EDIT to your repo location.
+QMML_REPO=/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project
+export PYTHONPATH="${QMML_REPO}/src:${PYTHONPATH}"
+
 python run_train.py
