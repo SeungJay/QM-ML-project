@@ -11,7 +11,7 @@ example CP2K/LAMMPS/n2p2 inputs it needs:
 | `1_aimd_and_frames/` | `run_aimd.py` + `run.slurm`, `run_select_frames.py` (+ `aimd.inp`, `trajectory-input.xyz`) | AIMD → `trajectory-output.xyz` + `aimd.cell`, then pick frames → `trajectory_inputs/` |
 | `2_dft_and_extract/` | `run_singlepoints.py` + `run.slurm`, `run_extract.py` (+ `step-0.inp`) | build job dirs + per-frame single-point DFT → `calculator-NNN/`, then extract → `input-SR.data` |
 | `3_charge_decouple/` | `run_decouple.py` + `run.slurm` (+ `coulomb-step-0.inp`, `lammps_initial.in`, `lammps_final.in`) | DFT-CES coulomb (CP2K↔LAMMPS) + subtract → `input-SR-QMML.data` |
-| `4_train_committee/` | `run_train.py`, `run.slurm` (+ `input.nn`) | train the n2p2 committee → `committee/nnp-data-1..N/` |
+| `4_train_committee/` | `run_train.py`, `run.slurm` (+ `input.nn`) | train the n2p2 committee → `committee/` (member 0 at top level + `nnp-data-1..N-1/`) |
 | `5_qmml_run/` | `run_qmml.py` (+ `base.cp2k.in`, `base.in.lammps`, `data.cp2k`, `data.lammps`, `run.slurm`) | constant-potential QM/ML run |
 
 Each stage's `run.slurm` runs the whole stage in one submission. In stages 1 and
@@ -34,7 +34,7 @@ forward exactly — **① carried in** (from the previous folder), **② you add
 | 1 AIMD + frames | — | `aimd.inp`, `trajectory-input.xyz` (initial config) | `trajectory-output.xyz`, `aimd.cell`, `trajectory_inputs/` |
 | 2 DFT + extract | `trajectory_inputs/` | `step-0.inp` | `calculator-NNN/` (+ `forces-output.xyz`), `input-SR.data` |
 | 3 charge decouple | `input-SR.data` | `coulomb-step-0.inp`, `lammps_initial.in`, `lammps_final.in` | `ref-calc-coulomb/QMML.data`, `input-SR-QMML.data` |
-| 4 train committee | `input-SR-QMML.data` | `input.nn` (n2p2 template) | `committee/nnp-data-1..N/` |
+| 4 train committee | `input-SR-QMML.data` | `input.nn` (n2p2 template) | `committee/` (member 0 top level + `nnp-data-1..N-1/`) |
 | 5 QM/ML run | `committee/` (path in `base.in.lammps`) | `base.cp2k.in`, `base.in.lammps`, `data.cp2k`, `data.lammps` | the QM/ML run |
 
 If you keep each stage in its own folder, copy the **① carried in** item from the

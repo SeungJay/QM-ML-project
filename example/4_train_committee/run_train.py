@@ -53,5 +53,7 @@ train_committee(
     skip_existing=True,               # resumable: skip members already trained
 )
 
-# Output: committee/  ->  set in stage 5's base.in.lammps:
+# Output: committee/ — member 0 at the top level (input.nn with committee_mode /
+# committee_data, scaling.data, weights.<Z>.data) + members 1..N-1 in
+# committee/nnp-data-1..N-1/. Point stage 5's base.in.lammps at it:
 #     pair_style nnp dir "…/committee/"  showewsum 0  showew no  resetew yes  ...

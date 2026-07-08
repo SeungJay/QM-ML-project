@@ -173,33 +173,80 @@ def train_committee(data_file: str, template_nn: str, out_dir: str = "committee"
                   element-resolved ACSF block generated for ``elements`` (see
                   :mod:`dataprep.symfunc`); a template listing symmetry functions
                   explicitly also works.
-    out_dir     : committee directory to create (``nnp-data-1 .. -N`` inside);
-                  this is what stage 5's ``pair_style nnp dir "…"`` points at.
+    out_dir     : committee directory to create — this is what stage 5's
+                  ``pair_style nnp dir "…"`` points at. Members are laid out the
+                  way the committee-n2p2 build reads them (see below).
     elements    : element symbols in fixed order, e.g. ``('O','H','C','Na','Cl')``.
     metric      : best-epoch selection — ``"force"``, ``"energy"`` or ``"last"``.
 
-    Members whose ``nnp-data-*`` dir already holds weights are skipped when
-    ``skip_existing`` (resumable). Returns ``out_dir``.
+    Layout produced (committee member ``c`` = ``0 .. n_members-1``, seed
+    ``seed0 + c``), matching ``Mode::readNeuralNetworkWeights`` in the bundled
+    n2p2::
+
+        out_dir/                     committee member 0 (top level, no subdir)
+            input.nn                 committee descriptor (+ committee_mode /
+                                     committee_data — read only by LAMMPS /
+                                     nnp-comp2, NOT by nnp-train)
+            scaling.data  weights.<Z>.data
+            nnp-data-1/  weights.<Z>.data   committee member 1
+            ...
+            nnp-data-<N-1>/ ...             committee member N-1
+
+    This is *not* active learning: each member is trained for ``n_epoch`` epochs,
+    its best epoch is kept, and the committee is assembled — done. Members whose
+    target dir already holds weights are skipped when ``skip_existing``
+    (resumable). Returns ``out_dir``.
     """
     data_file = os.path.abspath(data_file)
     template_nn = os.path.abspath(template_nn)
     out_dir = os.path.abspath(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
-    for i in range(n_members):
-        member_dir = os.path.join(out_dir, f"nnp-data-{i + 1}")
+    for c in range(n_members):
+        # committee member 0 lives at the top level; members 1..N-1 in nnp-data-c/
+        member_dir = out_dir if c == 0 else os.path.join(out_dir, f"nnp-data-{c}")
         done = glob.glob(os.path.join(member_dir, "weights.*.data"))
         if skip_existing and done:
-            print(f"member {i + 1}/{n_members}: already trained, skipping")
+            print(f"member {c + 1}/{n_members}: already trained, skipping")
             continue
-        print(f"member {i + 1}/{n_members}: training (seed={seed0 + i}) ...")
+        print(f"member {c + 1}/{n_members}: training (seed={seed0 + c}) ...")
         train_member(data_file, template_nn, member_dir,
-                     elements=elements, seed=seed0 + i, n_epoch=n_epoch,
+                     elements=elements, seed=seed0 + c, n_epoch=n_epoch,
                      n_bins=n_bins, metric=metric, cmd_scaling=cmd_scaling,
                      cmd_train=cmd_train, launcher=launcher,
                      keep_train_dir=keep_train_dir)
+
+    # top-level committee descriptor: member 0's input.nn + the prediction-only
+    # committee keywords (written last so it is correct after a resumed run too).
+    _write_committee_descriptor(out_dir, template_nn, elements=elements,
+                                seed=seed0, n_epoch=n_epoch, n_members=n_members)
     print(f"committee ready: {out_dir}  ({n_members} members)")
     return out_dir
+
+
+def _write_committee_descriptor(out_dir: str, template_nn: str, *,
+                                elements: Sequence[str], seed: int,
+                                n_epoch: int, n_members: int) -> str:
+    """Write the top-level committee ``input.nn`` LAMMPS / nnp-comp2 read.
+
+    It is member 0's filled ``input.nn`` plus ``committee_mode prediction`` and
+    ``committee_data <prefix> <size>``. These two keywords are **prediction only**
+    — ``nnp-train`` rejects a committee size > 1 — so they live only here, never in
+    the per-member training inputs.
+    """
+    text = _fill_template(Path(template_nn).read_text(),
+                          elements=elements, seed=seed, n_epoch=n_epoch)
+    text = text.rstrip("\n") + (
+        "\n\n"
+        "###############################################################################\n"
+        "# COMMITTEE (prediction only — read by LAMMPS pair_style nnp / nnp-comp2,\n"
+        "# NOT by nnp-train)\n"
+        "###############################################################################\n"
+        "committee_mode                  prediction     # average all NNs for prediction\n"
+        f"committee_data                  nnp-data {n_members}     # dir prefix + committee size\n")
+    out = os.path.join(out_dir, "input.nn")
+    Path(out).write_text(text)
+    return out
 
 
 def _split(cmd) -> list:
