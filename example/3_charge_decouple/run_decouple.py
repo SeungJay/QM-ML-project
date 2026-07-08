@@ -36,7 +36,7 @@ def archer2_srun(i_slot, n_core_task, size_node):
 CP2K = "/work/y07/shared/apps/core/cp2k/cp2k-9.1.0/exe/ARCHER2/cp2k.popt"
 # Bundled DFT-CES LAMMPS - use an ABSOLUTE path (run_coulomb executes it from
 # inside each calculator-NNN/ dir, so a relative path would not resolve). REPLACE:
-LMP = "/work/e05/e05/<user>/.../QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/bin/lmp_mpi"
+LMP = "/work/e05/e05/jay/1.Project/8.NNP_EDL/1.Elyte_Bi_Graphenes/5.reproduce/QM-ML-project/n2p2-v2.1.3-committee-nnp-extpot/bin/lmp_mpi"
 
 launcher = ProcessLauncher(mode=archer2_srun, n_slots=1, n_core_task=NCORES)
 
