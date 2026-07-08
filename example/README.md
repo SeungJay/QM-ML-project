@@ -35,7 +35,7 @@ forward exactly — **① carried in** (from the previous folder), **② you add
 | 2 DFT + extract | `trajectory_inputs/` | `step-0.inp` | `calculator-NNN/` (+ `forces-output.xyz`), `input-SR.data` |
 | 3 charge decouple | `input-SR.data` | `coulomb-step-0.inp`, `lammps_initial.in`, `lammps_final.in` | `ref-calc-coulomb/QMML.data`, `input-SR-QMML.data` |
 | 4 train committee | `input-SR-QMML.data` | `input.nn` (n2p2 template) | `committee/` (member 0 top level + `nnp-data-1..N-1/`) |
-| 5 QM/ML run | `committee/` (path in `base.in.lammps`) | `base.cp2k.in`, `base.in.lammps`, `data.cp2k`, `data.lammps` | the QM/ML run |
+| 5 QM/ML run | `committee/` (path in `base.in.lammps`) + initial structure from the training system (see note) | `base.cp2k.in`, `base.in.lammps` | the QM/ML run |
 
 If you keep each stage in its own folder, copy the **① carried in** item from the
 previous stage before submitting (run from the `example/` directory):
@@ -67,6 +67,15 @@ Notes:
   only `input-SR.data`.
 - `frame_index_map.txt` (in `trajectory_inputs/`) records which original AIMD
   frame each `NNN` came from.
+- **Stage 5 initial structure** (`data.cp2k` = electrode, `data.lammps` = full
+  electrode + electrolyte cell) is the configuration the production QM/ML run
+  starts from. It is **taken from the training system** — e.g. an equilibrated
+  frame of the stage-1 AIMD — not an unrelated input, so the committee potential
+  is applied to the same chemistry it was trained on. Prepare these two files
+  from that frame (any tool, e.g. OVITO) and keep the cell / atom types / charges
+  consistent with `base.cp2k.in` and `base.in.lammps` (`emap`). The `data.cp2k` /
+  `data.lammps` shipped here are an example of such a structure — replace them
+  with your own. (There is no conversion script; do this once, by hand.)
 
 ## Choosing the MPI launcher
 
