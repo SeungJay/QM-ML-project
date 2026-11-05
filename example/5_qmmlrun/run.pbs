@@ -1,0 +1,87 @@
+#!/bin/bash
+
+#SBATCH --job-name=1ly_k9_biasvalueV
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=128
+#SBATCH --cpus-per-task=1
+# --time and --qos below are only defaults for a bare "sbatch run.pbs";
+# submit_chain.sh overrides both on the command line from ./QUEUES.
+#SBATCH --time=96:00:00
+#SBATCH --account=e05-react-wal
+#SBATCH --partition=standard
+#SBATCH --qos=long
+#SBATCH --export=none
+#SBATCH --signal=B:USR1@90
+
+JOB_T0=$(date +%s)   # first command: the deadline counts from job start
+
+module load cpe/22.12
+module load cray-fftw/3.3.10.3
+module load cray-python
+
+module load gsl
+module load eigen
+
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/work/e05/e05/jay/0.programs/n2p2-committee-nnp/src/interface/lammps-nnp/src/
+export LD_LIBRARY_PATH=$CRAY_LD_LIBRARY_PATH:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/work/e05/e05/jay/0.programs/gsl/lib:$LD_LIBRARY_PATH
+
+# Ensure OMP_NUM_THREADS is consistent with cpus-per-task above
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+# Set thread affinity as recommended
+export OMP_PLACES=cores
+
+# Ensure cpus-per-task are passed to srun
+export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+
+# Deadline = this job's real end time (long 96 h or standard 24 h), minus a
+# margin for srun teardown.  qmml.py stops before starting a stage that would
+# not finish by then.  Fallback: 24 h from job start.
+cd "$SLURM_SUBMIT_DIR"
+END=$(squeue -h -j "$SLURM_JOB_ID" -o %e 2>/dev/null)
+END_S=$(date -d "$END" +%s 2>/dev/null) || END_S=$(( JOB_T0 + 86400 ))
+export QMML_DEADLINE=$(( END_S - 60 ))
+
+# ---- twin jobs ------------------------------------------------------------
+# submit_chain.sh queues this script on each QoS listed in ./QUEUES.
+# Whichever starts first takes the lock and cancels its twin; a twin that
+# starts anyway finds the lock held by a running job and leaves.
+if ! mkdir qmml.lock 2>/dev/null; then
+    owner=$(cat qmml.lock/jobid 2>/dev/null)
+    if [ -n "$owner" ] && [ -n "$(squeue -h -j "$owner" -t R -o %i 2>/dev/null)" ]; then
+        echo "$(date) job $SLURM_JOB_ID: job $owner already runs here, leaving" >> chain.log
+        exit 0
+    fi
+    echo "$(date) job $SLURM_JOB_ID: stale lock (job $owner), taking over" >> chain.log
+fi
+echo "$SLURM_JOB_ID" > qmml.lock/jobid
+trap 'rm -rf qmml.lock' EXIT
+for j in $(cat twin_jobs.txt 2>/dev/null); do
+    [ "$j" != "$SLURM_JOB_ID" ] && scancel "$j" 2>/dev/null
+done
+echo "$(date) job $SLURM_JOB_ID started ($SLURM_JOB_QOS), deadline $(date -d @$QMML_DEADLINE)" >> chain.log
+
+# If a stage overruns, Slurm sends USR1 90 s before the walltime kill.
+# Resubmit then, so the chain survives; qmml.py reruns the killed stage and
+# gives up itself if the same stage is killed twice in a row.
+on_walltime() {
+    echo "$(date) job $SLURM_JOB_ID hit walltime inside a stage" >> chain.log
+    [ ! -f STOP ] && { rm -rf qmml.lock; bash submit_chain.sh >> chain.log 2>&1; }
+    exit 0
+}
+trap on_walltime USR1
+
+python qmml.py >> python.txt 2>&1 &
+wait $!
+rc=$?
+
+# 99 = time ran out, more work left -> queue the next piece (again on both QoS).
+# 0 = all cycles done; anything else = error.  Neither resubmits.
+# "touch STOP" in this directory ends the chain after the current job.
+if [ $rc -eq 99 ] && [ ! -f STOP ]; then
+    rm -rf qmml.lock    # release first, so the next job can never find it held
+    bash submit_chain.sh >> chain.log 2>&1
+else
+    echo "$(date) chain ended: qmml.py exit code $rc" >> chain.log
+fi
